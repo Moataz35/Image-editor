@@ -14,6 +14,7 @@ In this application the user will be able to do the following on images:
 |--------------------|
 | Grary scale filter |
 | Black and White    |
+| Negative effect (invert images) |
 
 
 ## Gray scale filter
@@ -37,8 +38,18 @@ Read a good article [here](https://tannerhelland.com/2011/10/01/grayscale-image-
 
 ## Black and White filter
  Black and white images also lack color, but they typically have only two colors: black and white (0
- and 255). There are no intermediate shades of gray in a true black and white image. Each pixel is
- either black (representing darkness or absence of information) or white (representing brightness
- or presence of information). In digital imaging, black and white images are often created by
- converting color images to grayscale and then applying a threshold to convert shades of gray to
+ and 255). 
+ 
+ There are no intermediate shades of gray in a true black and white image. 
+ 
+ Each pixel is either black (representing darkness or absence of information) or white (representing brightness
+ or presence of information). 
+ 
+ In digital imaging, black and white images are often created by converting color images to grayscale and then applying a threshold to convert shades of gray to
  either black or white.
+
+ ## Negative effect (invert images)
+   Inverting colors is a simple yet powerful imageprocessing operation that transforms the colors of
+   an image by reversing each pixel's RGB values.
+   
+   This operation effectively produces a photographic negative effect, where light areas become dark and vice versa.
