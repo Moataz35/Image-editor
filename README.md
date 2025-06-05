@@ -1,6 +1,7 @@
 # A simple image processor
-An application to edit images
 
+An application to edit images
+We will use stb_image library to make this app.
 In this application the user will be able to do the following on images:
 
 1. Resize
@@ -10,10 +11,12 @@ In this application the user will be able to do the following on images:
 
 ## List of filters
 
-|    **Filters**     |
+|       Filters      |
 |--------------------|
 | Grary scale filter |
 | Black and White    |
+| Negative effect (invert images) |
+| Rotating image     |
 
 
 ## Gray scale filter
@@ -37,8 +40,33 @@ Read a good article [here](https://tannerhelland.com/2011/10/01/grayscale-image-
 
 ## Black and White filter
  Black and white images also lack color, but they typically have only two colors: black and white (0
- and 255). There are no intermediate shades of gray in a true black and white image. Each pixel is
- either black (representing darkness or absence of information) or white (representing brightness
- or presence of information). In digital imaging, black and white images are often created by
- converting color images to grayscale and then applying a threshold to convert shades of gray to
+ and 255). 
+ 
+ There are no intermediate shades of gray in a true black and white image. 
+ 
+ Each pixel is either black (representing darkness or absence of information) or white (representing brightness
+ or presence of information). 
+ 
+ In digital imaging, black and white images are often created by converting color images to grayscale and then applying a threshold to convert shades of gray to
  either black or white.
+
+###### Formula
+ Usualy we do it by first converting the image to grayscale then we choose a fixed value
+ and if a color value is greater than this value we turn it to white color (255) otherwise we turn it to black (0).
+
+ We will use the value 128 as a midpoint.
+
+## Negative effect (invert images)
+   Inverting colors is a simple yet powerful imageprocessing operation that transforms the colors of
+   an image by reversing each pixel's RGB values.
+   
+   This operation effectively produces a photographic negative effect, where light areas become dark and vice versa.
+
+###### Formula
+ We will just invert the color values (set the values to 255 - color value).
+
+## Rotating image
+ We will let the user rotate an image by 90° or 180° or 270°.
+
+###### Formula
+ We will use a 2D vector to rotate the pixels.

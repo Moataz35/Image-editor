@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <vector>
 #include "stb_image.h"
 #include "stb_image_write.h"
 #include "Image.h"
@@ -14,6 +15,19 @@ Image::Image() {
 	width = height = channels = size = 0;
 	imageNamePointer = NULL;
 	pixels = NULL;
+}
+
+Image::Image(string name, int width, int height, int channels) {
+	this->imageFullname = name;
+	this->imageNamePointer = imageFullname.c_str();
+	this->width = width;
+	this->height = height;
+	this->channels = channels;
+	this->size = width * height * channels;
+	this->pixels = new unsigned char[size];
+	for (int i = 0; i < size; i++) {
+		this->pixels[i] = 0;
+	}
 }
 
 Image::Image(string name) {
@@ -186,12 +200,84 @@ void Image::apply_BlackandWhite() {
 }
 
 void Image::apply_invert() {
-	cout << channels << endl;
 	if (channels < 3) {
 		return;
 	}
 	for (int i = 0; i < size; i++) {
 		int temp = (int)(pixels[i]);
 		pixels[i] = 255 - temp;
+	}
+}
+
+void Image::rotate_image_90() {
+	// Rotating an image 90° clockwise
+	swap(width, height);
+	// Set the pixels rotated in a 2D vector
+	int pixel_idx = 0;
+	vector<vector<unsigned char>> rotated(height, vector<unsigned char>(width * channels));
+	for (int col = (width * channels) - channels; col >= 0; col -= channels) {
+		for (int row = 0; row < height; row++) {
+			// For each channel in every pixel:
+			for (int ch = 0; ch < channels; ch++) {
+				rotated[row][col + ch] = pixels[pixel_idx];
+				pixel_idx++;
+			}
+		}
+	}
+	// Replace the original pixels with the new ones
+	pixel_idx = 0;
+	for (int row = 0; row < height; row++) {
+		for (int col = 0; col < (width * channels); col++) {
+			pixels[pixel_idx] = rotated[row][col];
+			pixel_idx++;
+		}
+	}
+}
+
+void Image::rotate_image_180() {
+	int pixel_idx = 0;
+	vector<vector<unsigned char>> rotated(height, vector<unsigned char>(width * channels));
+	for (int row = height - 1; row >= 0; row--) {
+		for (int col = (width * channels) - channels; col >= 0; col -= channels) {
+			// For each channel in every pixel:
+			for (int ch = 0; ch < channels; ch++) {
+				rotated[row][col + ch] = pixels[pixel_idx];
+				pixel_idx++;
+			}
+			
+		}
+	}
+	// Replace the original pixels with the new ones
+	pixel_idx = 0;
+	for (int row = 0; row < height; row++) {
+		for (int col = 0; col < (width * channels); col++) {
+			pixels[pixel_idx] = rotated[row][col];
+			pixel_idx++;
+		}
+	}
+}
+
+void Image::rotate_image_270() {
+	// Rotating an image 90° clockwise
+	swap(width, height);
+	// Set the pixels rotated in a 2D vector
+	int pixel_idx = 0;
+	vector<vector<unsigned char>> rotated(height, vector<unsigned char>(width * channels));
+	for (int col = 0; col <= (width * channels) - channels; col += channels) {
+		for (int row = height - 1; row >= 0; row--) {
+			// For each channel in every pixel:
+			for (int ch = 0; ch < channels; ch++) {
+				rotated[row][col + ch] = pixels[pixel_idx];
+				pixel_idx++;
+			}
+		}
+	}
+	// Replace the original pixels with the new ones
+	pixel_idx = 0;
+	for (int row = 0; row < height; row++) {
+		for (int col = 0; col < (width * channels); col++) {
+			pixels[pixel_idx] = rotated[row][col];
+			pixel_idx++;
+		}
 	}
 }

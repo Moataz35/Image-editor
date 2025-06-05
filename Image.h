@@ -13,6 +13,7 @@ class Image {
 	unsigned char* pixels;
 public:
 	Image();
+	Image(std::string name, int width, int height, int channels);
 	Image(std::string name);
 	Image(Image &img, std::string newfullname);
 	~Image();
@@ -22,9 +23,16 @@ public:
 	bool can_create_new_file(std::string newImageName, std::string extension);
 	std::string get_file_extension(std::string name);
 	// Filters
+	// 1. Grayscale
 	void apply_grayscale();
+	// 2. Black and White
 	void apply_BlackandWhite();
+	// 3. Negative effect (invert images)
 	void apply_invert();
+	// 6. Rotate image
+	void rotate_image_90();
+	void rotate_image_180();
+	void rotate_image_270();
 };
 
 #endif
