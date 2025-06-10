@@ -29,10 +29,15 @@ public:
 	void apply_BlackandWhite();
 	// 3. Negative effect (invert images)
 	void apply_invert();
+	// 5. Flip image
+	void flip_horizontally();
+	void flip_vertically();
 	// 6. Rotate image
 	void rotate_image_90();
 	void rotate_image_180();
 	void rotate_image_270();
+	// 11. Resizing
+	void resize(int newWidth, int newheight);
 };
 
 #endif

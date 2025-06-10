@@ -281,3 +281,94 @@ void Image::rotate_image_270() {
 		}
 	}
 }
+
+void Image::resize(int newWidth, int newheight) {
+	float xfactor = (float)width / newWidth;
+	float yfactor = (float)height / newheight;
+	// Save the original pixels to free the pointer
+	vector<vector<vector<unsigned char>>> original(height, vector<vector<unsigned char>>(width, vector<unsigned char>(channels)));
+	int pixel_idx = 0;
+	for (int y = 0; y < height; y++) {
+		for (int x = 0; x < width; x++) {
+			for (int ch = 0; ch < channels; ch++) {
+				original[y][x][ch] = pixels[pixel_idx];
+				pixel_idx++;
+			}
+		}
+	}
+	vector<vector<vector<unsigned char>>> resized(newheight, vector<vector<unsigned char>>(newWidth, vector<unsigned char>(channels)));
+	for (int y = 0; y < newheight; y++) {
+		for (int x = 0; x < newWidth; x++) {
+			int near_x = (x * xfactor);
+			int near_y = (y * yfactor);
+			if (near_x >= width) near_x = width - 1;
+			if (near_y >= height) near_y = height - 1;
+
+			for (int ch = 0; ch < channels; ch++) {
+				resized[y][x][ch] = original[near_y][near_x][ch];
+			}
+		}
+	}
+
+	width = newWidth;
+	height = newheight;
+	size = width * height * channels;
+	stbi_image_free(pixels);
+
+	pixel_idx = 0;
+	pixels = new unsigned char[size];
+	for (int y = 0; y < newheight; y++) {
+		for (int x = 0; x < newWidth; x++) {
+			for (int ch = 0; ch < channels; ch++) {
+				pixels[pixel_idx] = resized[y][x][ch];
+				pixel_idx++;
+			}
+		}
+	}
+}
+
+void Image::flip_horizontally() {
+	vector<vector<vector<unsigned char>>> flipped(height, vector<vector<unsigned char>>(width, vector<unsigned char>(channels)));
+	int pixel_idx = 0;
+	for (int y = 0; y < height; y++) {
+		for (int x = width - 1; x >= 0; x--) {
+			for (int ch = 0; ch < channels; ch++) {
+				flipped[y][x][ch] = pixels[pixel_idx];
+				pixel_idx++;
+			}
+		}
+	}
+
+	pixel_idx = 0;
+	for (int y = 0; y < height; y++) {
+		for (int x = 0; x < width; x++) {
+			for (int ch = 0; ch < channels; ch++) {
+				pixels[pixel_idx] = flipped[y][x][ch];
+				pixel_idx++;
+			}
+		}
+	}
+}
+
+void Image::flip_vertically() {
+	vector<vector<vector<unsigned char>>> flipped(height, vector<vector<unsigned char>>(width, vector<unsigned char>(channels)));
+	int pixel_idx = 0;
+	for (int y = height - 1; y >= 0; y--) {
+		for (int x = 0; x < width; x++) {
+			for (int ch = 0; ch < channels; ch++) {
+				flipped[y][x][ch] = pixels[pixel_idx];
+				pixel_idx++;
+			}
+		}
+	}
+
+	pixel_idx = 0;
+	for (int y = 0; y < height; y++) {
+		for (int x = 0; x < width; x++) {
+			for (int ch = 0; ch < channels; ch++) {
+				pixels[pixel_idx] = flipped[y][x][ch];
+				pixel_idx++;
+			}
+		}
+	}
+}

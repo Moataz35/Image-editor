@@ -65,8 +65,16 @@ Read a good article [here](https://tannerhelland.com/2011/10/01/grayscale-image-
 ###### Formula
  We will just invert the color values (set the values to 255 - color value).
 
+## Flipping image
+ Flipping an image involves mirroring its content horizontally or vertically.
+
+
 ## Rotating image
  We will let the user rotate an image by 90° or 180° or 270°.
 
 ###### Formula
  We will use a 2D vector to rotate the pixels.
+
+
+## Resizing image
+ Resizing an image involves changing the dimensions of the image while maintaining the same image details.
