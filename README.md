@@ -16,7 +16,12 @@ In this application the user will be able to do the following on images:
 | Grary scale filter |
 | Black and White    |
 | Negative effect (invert images) |
-| Rotating image     |
+|     Flipping       |
+|     Rotating       |
+|    Brightness      |
+|     Croping        |
+|    Add a frame     |
+|     Resizing       |
 
 
 ## Gray scale filter
@@ -75,6 +80,14 @@ Read a good article [here](https://tannerhelland.com/2011/10/01/grayscale-image-
 ###### Formula
  We will use a 2D vector to rotate the pixels.
 
+## Change brightness
+ This filter allow the user to make the image darker or lighter by 50% from the original image.
+
+## Croping image
+ This filter allow the user to choose a start point and the dimensions of a part he/she wants to crop from the image.
+
+## Add a frame
+ This allows the user to add a simple frame with different colors.
 
 ## Resizing image
  Resizing an image involves changing the dimensions of the image while maintaining the same image details.

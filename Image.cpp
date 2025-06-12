@@ -17,43 +17,48 @@ Image::Image() {
 	pixels = NULL;
 }
 
-Image::Image(string name, int width, int height, int channels) {
-	this->imageFullname = name;
-	this->imageNamePointer = imageFullname.c_str();
-	this->width = width;
-	this->height = height;
+Image::Image(int width, int height, int channels) {
+	this->width    = width;
+	this->height   = height;
 	this->channels = channels;
-	this->size = width * height * channels;
-	this->pixels = new unsigned char[size];
+	this->size     = width * height * channels;
+	this->pixels   = new unsigned char[size];
 	for (int i = 0; i < size; i++) {
 		this->pixels[i] = 0;
 	}
 }
 
 Image::Image(string name) {
-	if (get_image(name)) {
-		cout << "Read the file successfuly\n";
-	}
-	else {
-		cout << "Failed to read the file!\n";
-	}
+	get_image(name);
 }
 
-Image::Image(Image& img, string newfullname) {
-	this->imageFullname = newfullname;
-	this->imageNamePointer = imageFullname.c_str();
-	this->width = img.width;
-	this->height = img.height;
+Image::Image(Image& img) {
+	this->width    = img.width;
+	this->height   = img.height;
 	this->channels = img.channels;
-	this->size = width * height * channels;
+	this->size     = width * height * channels;
 	this->pixels = new unsigned char[size];
 	for (int i = 0; i < size; i++) {
 		this->pixels[i] = img.pixels[i];
 	}
 }
 
+Image& Image::operator=(Image& img) {
+	stbi_image_free(this->pixels);
+	this->width    = img.width;
+	this->height   = img.height;
+	this->channels = img.channels;
+	this->size     = width * height * channels;
+	this->pixels = new unsigned char[size];
+	for (int i = 0; i < size; i++) {
+		this->pixels[i] = img.pixels[i];
+	}
+	return *this;
+}
+
 Image::~Image() {
 	stbi_image_free(pixels);
+	cout << "Image has been destroyed!\n";
 }
 
 bool Image::get_image(string name) {
@@ -78,8 +83,10 @@ bool Image::get_image(string name) {
 	size = width * height * channels;
 
 	if (pixels != NULL) {
+		cout << "Read the file successfuly\n";
 		return true;
 	}
+	cout << "Failed to read the file!\n";
 	cout << "Wrong file name\n";
 	return false;
 }
@@ -368,6 +375,123 @@ void Image::flip_vertically() {
 			for (int ch = 0; ch < channels; ch++) {
 				pixels[pixel_idx] = flipped[y][x][ch];
 				pixel_idx++;
+			}
+		}
+	}
+}
+
+void Image::crop(int start_x, int start_y, int newWidth, int newheight) {
+	newWidth = min(newWidth, width - start_x);
+	newheight = min(newheight, height - start_y);
+	Image temp(newWidth, newheight, this->channels);
+	vector<vector<vector<unsigned char>>> original(height, vector<vector<unsigned char>>(width, vector<unsigned char>(channels)));
+	int pixel_idx = 0;
+	for (int y = 0; y < height; y++) {
+		for (int x = 0; x < width; x++) {
+			for (int ch = 0; ch < channels; ch++) {
+				original[y][x][ch] = this->pixels[pixel_idx];
+				pixel_idx++;
+			}
+		}
+	}
+
+	pixel_idx = 0;
+	for (int y = start_y; y < newheight + start_y; y++) {
+		for (int x = start_x; x < newWidth + start_y; x++) {
+			for (int ch = 0; ch < channels; ch++) {
+				temp.pixels[pixel_idx] = original[y][x][ch];
+				pixel_idx++;
+			}
+		}
+	}
+
+	this->operator=(temp);
+	//*this = temp;
+}
+
+void Image::increase_brightness() {
+	for (int i = 0; i < size; i++) {
+		if (static_cast<int>(pixels[i]) * 1.5 > 255) {
+			pixels[i] = 255;
+		}
+		else {
+			pixels[i] = static_cast<int>(pixels[i]) * 1.5;
+			// pixels[i] = pixels[i] + 0.5 * pixels[i]
+		}
+	}
+}
+
+void Image::decrease_brightness() {
+	for (int i = 0; i < size; i++) {
+		pixels[i] = static_cast<int>(pixels[i]) * 0.5;
+		// pixels[i] = pixels[i] - 0.5 * pixels[i]
+	}
+}
+
+
+void Image::blend(Image& img) {
+	// Blend two images to a new one Which image1 (the caller) will be more clear
+
+	img.resize(400, 400);
+	this->resize(400, 400);
+
+	// Problem when the channels are different
+	if (img.channels != this->channels) return;
+
+	vector<vector<vector<unsigned char>>> blended(height, vector<vector<unsigned char>>(width, vector<unsigned char>(channels)));
+	int pIdx = 0;
+	for (int y = 0; y < height; y++) {
+		for (int x = 0; x < width; x++) {
+			for (int ch = 0; ch < channels; ch++) {
+				int blended_pixel = (this->pixels[pIdx] * 0.5) + (img.pixels[pIdx] * 0.5);
+				blended[y][x][ch] = min(blended_pixel, 255);
+				this->pixels[pIdx] = blended[y][x][ch];
+				pIdx++;
+			}
+		}
+	}
+}
+
+void Image::add_frame(int thickness) {
+	width = width + 2 * thickness;
+	height = height + 2 * thickness;
+	vector<vector<vector<unsigned char>>> edited(height, vector<vector<unsigned char>>(width, vector<unsigned char>(channels)));
+	int pixel_idx = 0;
+	// First n row, last n column, last n row, last n column all their pixels will be blue
+	// n is the thickness of the frame
+	for (int y = 0; y < height; y++) {
+		for (int x = 0; x < width; x++) {
+			for (int ch = 0; ch < channels; ch++) {
+				if (y < thickness || y >= height - thickness || x < thickness || x >= width - thickness) {
+					if (x == thickness / 2 || y == thickness / 2 || x == width - thickness / 2 + 1 || y == height - thickness / 2 + 1) {
+						// Add white lines
+						edited[y][x][ch] = 255;
+					}
+					else {
+						if (ch > 1) {
+							edited[y][x][ch] = 255;
+						}
+						else {
+							edited[y][x][ch] = 0;
+						}
+					}
+				}
+				else {
+					edited[y][x][ch] = pixels[pixel_idx];
+					pixel_idx++;
+					if (pixel_idx >= size) pixel_idx = 0;
+				}
+			}
+		}
+	}
+	this->resize(width, height);
+	pixel_idx = 0;
+	for (int y = 0; y < height; y++) {
+		for (int x = 0; x < width; x++) {
+			for (int ch = 0; ch < channels; ch++) {
+				pixels[pixel_idx] = edited[y][x][ch];
+				pixel_idx++;
+				if (pixel_idx >= size) pixel_idx = 0;
 			}
 		}
 	}
