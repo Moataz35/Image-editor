@@ -22,6 +22,7 @@ In this application the user will be able to do the following on images:
 |     Croping        |
 |    Add a frame     |
 |     Resizing       |
+|     Bluring        |
 
 
 ## Gray scale filter
@@ -91,3 +92,17 @@ Read a good article [here](https://tannerhelland.com/2011/10/01/grayscale-image-
 
 ## Resizing image
  Resizing an image involves changing the dimensions of the image while maintaining the same image details.
+
+## Blur image
+ Bluring is a technique used to reduce the level of detail or sharpness in an image, resulting in a smoother appearance.
+
+###### Formula1: Mean blur
+ Mean blur also known as average blur or box blur is a simple and widely used image processing tecknique for smoothing an image and reducing noise.
+
+ It works by replacing each pixel's value with the average of the pixel values of its surrounding pixels.
+
+ Mean blur works on the princlple that noise often manifests as isolate, high variations in pixel values.
+
+ By averaging a pixel with its neighbors these extreme variations are smoothed out.
+
+ Read a good article [here](https://how.dev/answers/how-to-blur-an-image-using-a-mean-filter).

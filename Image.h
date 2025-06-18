@@ -15,7 +15,7 @@ public:
 	Image();
 	Image(int width, int height, int channels);
 	Image(std::string name);
-	Image(Image& img);
+	Image(const Image& img); // The returned value from a function is not a variable of type Image it's constant
 	~Image();
 	Image& operator=(Image& img);
 	bool get_image(std::string name);
@@ -30,6 +30,9 @@ public:
 	void apply_BlackandWhite();
 	// 3. Negative effect (invert images)
 	void apply_invert();
+	// 4. Merge images
+	friend Image merge_horizontally(Image& img1, Image& img2);
+	friend Image merge_vertically(Image& img1, Image& img2);
 	// 5. Flip image
 	void flip_horizontally();
 	void flip_vertically();
@@ -46,6 +49,8 @@ public:
 	void add_frame(int thickness);
 	// 11. Resizing
 	void resize(int newWidth, int newheight);
+	// 12. Blur
+	void apply_mean_blur();
 
 	// Additional
 	void blend(Image& img);

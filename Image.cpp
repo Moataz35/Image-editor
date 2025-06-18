@@ -32,7 +32,7 @@ Image::Image(string name) {
 	get_image(name);
 }
 
-Image::Image(Image& img) {
+Image::Image(const Image& img) {
 	this->width    = img.width;
 	this->height   = img.height;
 	this->channels = img.channels;
@@ -186,24 +186,36 @@ void Image::apply_grayscale() {
 		// It's already doesn't have RGB colors
 		return;
 	}
+
+	vector<unsigned char> grey_pixels(width * height);
 	// Grayscale formula that is used in Photoshop and GIMP
-	for (int i = 0; i < size; i += channels) {
-		int gray = (int)pixels[i] * 0.3 + (int)pixels[i + 1] * 0.59 + (int)pixels[i + 2] * 0.11;
-		pixels[i] = pixels[i + 1] = pixels[i + 2] = gray;
+	for (int i = 0, grey_i = 0; i < size; i += channels, grey_i++) {
+		int grey = (int)(pixels[i]) * 0.3 + (int)(pixels[i + 1]) * 0.59 + (int)(pixels[i + 2]) * 0.11;
+		grey_pixels[grey_i] = grey;
+	}
+
+	this->size = size / channels;
+	this->channels = 1;
+	stbi_image_free(pixels);
+	pixels = new unsigned char[size];
+
+	// Get the new pixels from gray_pixels
+	for (int i = 0; i < size; i++) {
+		pixels[i] = grey_pixels[i];
 	}
 }
 
 void Image::apply_BlackandWhite() {
 	apply_grayscale();
-	for (int i = 0; i < size; i++) {
-		if ((int)pixels[i] > 128) {
+	// For 2 channels image we want to edit the first pixel only
+	for (int i = 0; i < size; i += channels) {
+		if ((int)(pixels[i]) > 128) {
 			pixels[i] = 255;
 		}
 		else {
 			pixels[i] = 0;
 		}
 	}
-	return;
 }
 
 void Image::apply_invert() {
@@ -453,6 +465,7 @@ void Image::blend(Image& img) {
 }
 
 void Image::add_frame(int thickness) {
+	// Add a colorful frame to RGB or RGBA images and if the channels is less than 3 it will be a black frame
 	width = width + 2 * thickness;
 	height = height + 2 * thickness;
 	vector<vector<vector<unsigned char>>> edited(height, vector<vector<unsigned char>>(width, vector<unsigned char>(channels)));
@@ -463,7 +476,7 @@ void Image::add_frame(int thickness) {
 		for (int x = 0; x < width; x++) {
 			for (int ch = 0; ch < channels; ch++) {
 				if (y < thickness || y >= height - thickness || x < thickness || x >= width - thickness) {
-					if (x == thickness / 2 || y == thickness / 2 || x == width - thickness / 2 + 1 || y == height - thickness / 2 + 1) {
+					if (x == thickness / 2 || y == thickness / 2 || x == width - thickness / 2 - 1 || y == height - thickness / 2 - 1) {
 						// Add white lines
 						edited[y][x][ch] = 255;
 					}
@@ -495,4 +508,164 @@ void Image::add_frame(int thickness) {
 			}
 		}
 	}
+}
+
+
+void Image::apply_mean_blur() {
+	const int N = 9;
+	// 5x5 kernel with sigma = 1
+	/*vector<vector<int>> kernel = {
+		{1,  4,  6,  4, 1},
+		{4, 16, 24, 16, 4},
+		{6, 24, 36, 24, 6},
+		{4, 16, 24, 16, 4},
+		{1,  4,  6,  4, 1}
+	};*/
+	vector<vector<int>> kernel(N, vector<int>(N, 1));
+	const int radius = kernel.size() / 2;
+
+	// Save the original pixels
+	vector<vector<vector<unsigned char>>> original(height, vector<vector<unsigned char>>(width, vector<unsigned char>(channels)));
+	int pixel_idx = 0;
+	for (int y = 0; y < height; y++) {
+		for (int x = 0; x < width; x++) {
+			for (int ch = 0; ch < channels; ch++) {
+				original[y][x][ch] = pixels[pixel_idx];
+				pixel_idx++;
+				if (pixel_idx >= size) pixel_idx = 0;
+			}
+		}
+	}
+
+	// Save the pixels after convolution to a new image (we just use a new 3D vector)
+	vector<vector<vector<unsigned char>>> edited(height, vector<vector<unsigned char>>(width, vector<unsigned char>(channels)));
+	for (int y = 0; y < height; y++) {
+		for (int x = 0; x < width; x++) {
+			for (int ch = 0; ch < channels; ch++) {
+				// Move the kernel on the image such that the pixel we are on is at the center of the kernel
+				int sum = 0;
+				for (int i = y - radius; i <= y + radius; i++) {
+					for (int j = x - radius; j <= x + radius; j++) {
+						// Handle the edge case
+						if (i < height && i >= 0 && j < width && j >= 0) {
+							int kernel_i = i - (y - radius);
+							int kernel_j = j - (x - radius);
+							sum += original[i][j][ch] * kernel[kernel_i][kernel_j];
+						}
+					}
+				}
+				edited[y][x][ch] = min(255, sum / (N * N));
+			}
+		}
+	}
+
+	pixel_idx = 0;
+	for (int y = 0; y < height; y++) {
+		for (int x = 0; x < width; x++) {
+			for (int ch = 0; ch < channels; ch++) {
+				pixels[pixel_idx] = edited[y][x][ch];
+				pixel_idx++;
+				if (pixel_idx >= size) pixel_idx = 0;
+			}
+		}
+	}
+}
+
+Image merge_horizontally(Image& img1, Image& img2) {
+	// Merging 2 images horizontally by resizing the image that is bigger in height
+	if (img1.channels != img2.channels) {
+		// We don't merge 2 images different in channels
+		Image no_image;
+		return no_image;
+	}
+
+	if (img1.height > img2.height) {
+		img1.resize(img1.width, img2.height);
+	}
+	else if (img1.height < img2.height) {
+		img2.resize(img2.width, img1.height);
+	}
+
+	Image merged(img1.width + img2.width, img1.height, img1.channels);
+	vector<vector<vector<unsigned char>>> edited(merged.height, vector<vector<unsigned char>>(merged.width, vector<unsigned char>(merged.channels)));
+	int pixel1_idx = 0, pixel2_idx = 0;
+	for (int y = 0; y < merged.height; y++) {
+		for (int x = 0; x < merged.width; x++) {
+			for (int ch = 0; ch < merged.channels; ch++) {
+				if (x < img1.width) {
+					edited[y][x][ch] = img1.pixels[pixel1_idx];
+					pixel1_idx++;
+					if (pixel1_idx >= img1.size) pixel1_idx = 0; // Just for safety
+				}
+				else {
+					edited[y][x][ch] = img2.pixels[pixel2_idx];
+					pixel2_idx++;
+					if (pixel2_idx >= img2.size) pixel2_idx = 0; // Just for safety
+				}
+			}
+		}
+	}
+
+	pixel1_idx = 0;
+	for (int y = 0; y < merged.height; y++) {
+		for (int x = 0; x < merged.width; x++) {
+			for (int ch = 0; ch < merged.channels; ch++) {
+				merged.pixels[pixel1_idx] = edited[y][x][ch];
+				pixel1_idx++;
+				if (pixel1_idx >= merged.size) pixel1_idx = 0;
+			}
+		}
+	}
+
+	return merged;
+}
+
+Image merge_vertically(Image& img1, Image& img2) {
+	// Merging 2 images vertically by resizing the image that is bigger in width
+	if (img1.channels != img2.channels) {
+		// We don't merge 2 images different in channels
+		Image no_image;
+		return no_image;
+	}
+
+	if (img1.width > img2.width) {
+		img1.resize(img2.width, img1.height);
+	}
+	else if (img1.width < img2.width) {
+		img2.resize(img1.width, img2.height);
+	}
+
+	Image merged(img1.width, img1.height + img2.height, img1.channels);
+	vector<vector<vector<unsigned char>>> edited(merged.height, vector<vector<unsigned char>>(merged.width, vector<unsigned char>(merged.channels)));
+	int pixel1_idx = 0, pixel2_idx = 0;
+	for (int y = 0; y < merged.height; y++) {
+		for (int x = 0; x < merged.width; x++) {
+			for (int ch = 0; ch < merged.channels; ch++) {
+				if (y < img1.height) {
+					edited[y][x][ch] = img1.pixels[pixel1_idx];
+					pixel1_idx++;
+					if (pixel1_idx >= img1.size) pixel1_idx = 0;
+				}
+				else {
+					edited[y][x][ch] = img2.pixels[pixel2_idx];
+					pixel2_idx++;
+					if (pixel2_idx >= img2.size) pixel2_idx = 0;
+				}
+			}
+		}
+	}
+
+
+	pixel1_idx = 0;
+	for (int y = 0; y < merged.height; y++) {
+		for (int x = 0; x < merged.width; x++) {
+			for (int ch = 0; ch < merged.channels; ch++) {
+				merged.pixels[pixel1_idx] = edited[y][x][ch];
+				pixel1_idx++;
+				if (pixel1_idx >= merged.size) pixel1_idx = 0;
+			}
+		}
+	}
+
+	return merged;
 }
