@@ -25,7 +25,7 @@ public:
 	std::string get_file_extension(std::string name);
 	// Filters
 	// 1. Grayscale
-	void apply_grayscale();
+	void apply_greyscale();
 	// 2. Black and White
 	void apply_BlackandWhite();
 	// 3. Negative effect (invert images)
@@ -47,6 +47,8 @@ public:
 	void crop(int start_x, int start_y, int width, int height);
 	// 9. Adding frame
 	void add_frame(int thickness);
+	// 10. Detect edges (using sobel operator)
+	void detect_edges();
 	// 11. Resizing
 	void resize(int newWidth, int newheight);
 	// 12. Blur

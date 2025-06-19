@@ -181,7 +181,7 @@ string Image::get_file_extension(string name) {
 	return NO_EXTENSION;
 }
 
-void Image::apply_grayscale() {
+void Image::apply_greyscale() {
 	if (channels < 3) {
 		// It's already doesn't have RGB colors
 		return;
@@ -206,7 +206,7 @@ void Image::apply_grayscale() {
 }
 
 void Image::apply_BlackandWhite() {
-	apply_grayscale();
+	apply_greyscale();
 	// For 2 channels image we want to edit the first pixel only
 	for (int i = 0; i < size; i += channels) {
 		if ((int)(pixels[i]) > 128) {
@@ -229,7 +229,7 @@ void Image::apply_invert() {
 }
 
 void Image::rotate_image_90() {
-	// Rotating an image 90° clockwise
+	// Rotating an image 90ï¿½ clockwise
 	swap(width, height);
 	// Set the pixels rotated in a 2D vector
 	int pixel_idx = 0;
@@ -277,7 +277,7 @@ void Image::rotate_image_180() {
 }
 
 void Image::rotate_image_270() {
-	// Rotating an image 90° clockwise
+	// Rotating an image 90ï¿½ clockwise
 	swap(width, height);
 	// Set the pixels rotated in a 2D vector
 	int pixel_idx = 0;
@@ -668,4 +668,66 @@ Image merge_vertically(Image& img1, Image& img2) {
 	}
 
 	return merged;
+}
+
+void Image::detect_edges() {
+	// Detect edges in an image using Sobel operator
+	// First we convert the image to greyscale
+	apply_greyscale();
+	int pixels_idx = 0;
+	vector<vector<unsigned char>> original_pixels(height, vector<unsigned char>(width));
+	vector<vector<unsigned char>> edited(height, vector<unsigned char>(width));
+	for (int y = 0; y < height; y++) {
+		for (int x = 0; x < width; x++) {
+			original_pixels[y][x] = pixels[pixels_idx];
+			pixels_idx++;
+			if (pixels_idx >= size) pixels_idx = 0;
+		}
+	}
+	// Sobel operator
+	const int radius = 1;
+	int kernel[3][3] = {
+		{-1, 0, 1},
+		{-2, 0, 2},
+		{-1, 0, 1}
+	};
+	for (int y = 0; y < height; y++) {
+		for (int x = 0; x < width; x++) {
+			int g_x = 0, g_y = 0, gradient = 0;
+			// Calculate Gx
+			for (int i = y - radius; i <= y + radius; i++) {
+				for (int j = x - radius; j <= x + radius; j++) {
+					if (i >= 0 && i < height && j >= 0 && j < width) {
+						int kernel_i = i - (y - radius); 
+						int kernel_j = j - (x - radius);
+						g_x += (int)(original_pixels[i][j]) * kernel[kernel_i][kernel_j];
+					}
+				}
+			}
+			// Calculate Gy
+			for (int i = y - radius, kernel_j = 0; i <= y + radius; i++, kernel_j++) {
+				for (int j = x - radius, kernel_i = 2; j <= x + radius; j++, kernel_j--) {
+					if (i >= 0 && i < height && j >= 0 && j < width) {
+						g_x += (int)(original_pixels[i][j]) * kernel[kernel_i][kernel_j];
+					}
+				}
+			}
+			gradient = sqrt(pow(g_x, 2) + pow(g_y, 2));
+			if (gradient > 100) {
+				edited[y][x] = 0;
+			}
+			else {
+				edited[y][x] = 255;
+			}
+		}
+	}
+
+	pixels_idx = 0;
+	for (int y = 0; y < height; y++) {
+		for (int x = 0; x < width; x++) {
+			pixels[pixels_idx] = edited[y][x];
+			pixels_idx++;
+			if (pixels_idx >= size) pixels_idx = 0;
+		}
+	}
 }
