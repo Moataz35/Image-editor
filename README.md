@@ -116,6 +116,7 @@ Read a good article [here](https://tannerhelland.com/2011/10/01/grayscale-image-
  G = sqrt(pow(Gx, 2) + pow(Gy, 2));
  ```
  We use a threshold to determine is this pixel is a part of an edge or not. If G is greater than the threshold then its a part of an edge.
+ Read [this](https://www.cs.auckland.ac.nz/courses/compsci373s1c/PatricesLectures/Edge%20detection-Sobel_2up.pdf) for more information.
 
 ## Resizing image
  Resizing an image involves changing the dimensions of the image while maintaining the same image details.
