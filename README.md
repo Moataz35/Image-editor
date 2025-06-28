@@ -15,12 +15,14 @@ In this application the user will be able to do the following on images:
 |--------------------|
 | Grary scale filter |
 | Black and White    |
-| Negative effect (invert images) |
+| Negative effect    |
+|  Merge two images  |
 |     Flipping       |
 |     Rotating       |
 |    Brightness      |
 |     Croping        |
 |    Add a frame     |
+|  Edge detection    |
 |     Resizing       |
 |     Bluring        |
 
@@ -71,6 +73,13 @@ Read a good article [here](https://tannerhelland.com/2011/10/01/grayscale-image-
 ###### Formula
  We will just invert the color values (set the values to 255 - color value).
 
+## Merging images
+ With this filter we will be able to merge two images horizontally or vertically.
+
+###### Fommula
+ First we will resize the big image (the one which has the bigger height in case of merging horizontally) to make it equal to the smaller one.
+ After that we will use a vector to save the new pixels of the new big image.
+
 ## Flipping image
  Flipping an image involves mirroring its content horizontally or vertically.
 
@@ -89,6 +98,24 @@ Read a good article [here](https://tannerhelland.com/2011/10/01/grayscale-image-
 
 ## Add a frame
  This allows the user to add a simple frame with different colors.
+
+## Edge detection
+ This filter detect the edges in an image.
+ An edge in the world of pixels is a sudden change in the intensity of the pixels.
+ It's a transition between objects or between an object and a background.
+
+###### Formula
+ Using Sobel filter.
+ 
+ It works by calculating the gradient of image intensity at each pixel within the image.
+ The sobel filter uses two 3 x 3 kernels one for changes in the horizontal direction, and one for changes in the vertical direction.
+ The two kernels are convolved with the original image to calculate the approximations of the derivatives.
+ Let's define Gx as the gradient in the x direction and Gy as the gradient in the y direction.
+ The gradient magnitude is calculated from Gx and Gy:
+ ```
+ G = sqrt(pow(Gx, 2) + pow(Gy, 2));
+ ```
+ We use a threshold to determine is this pixel is a part of an edge or not. If G is greater than the threshold then its a part of an edge.
 
 ## Resizing image
  Resizing an image involves changing the dimensions of the image while maintaining the same image details.
