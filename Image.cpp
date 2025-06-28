@@ -4,7 +4,6 @@
 #include <fstream>
 #include <string>
 #include <vector>
-#include <cmath>
 #include "stb_image.h"
 #include "stb_image_write.h"
 #include "Image.h"
@@ -182,17 +181,17 @@ string Image::get_file_extension(string name) {
 	return NO_EXTENSION;
 }
 
-void Image::apply_greyscale() {
+void Image::apply_grayscale() {
 	if (channels < 3) {
 		// It's already doesn't have RGB colors
 		return;
 	}
 
-	vector<unsigned char> grey_pixels(width * height);
+	vector<unsigned char> gray_pixels(width * height);
 	// Grayscale formula that is used in Photoshop and GIMP
 	for (int i = 0, grey_i = 0; i < size; i += channels, grey_i++) {
 		int grey = (int)(pixels[i]) * 0.3 + (int)(pixels[i + 1]) * 0.59 + (int)(pixels[i + 2]) * 0.11;
-		grey_pixels[grey_i] = grey;
+		gray_pixels[grey_i] = grey;
 	}
 
 	this->size = size / channels;
@@ -202,12 +201,12 @@ void Image::apply_greyscale() {
 
 	// Get the new pixels from gray_pixels
 	for (int i = 0; i < size; i++) {
-		pixels[i] = grey_pixels[i];
+		pixels[i] = gray_pixels[i];
 	}
 }
 
 void Image::apply_BlackandWhite() {
-	apply_greyscale();
+	apply_grayscale();
 	// For 2 channels image we want to edit the first pixel only
 	for (int i = 0; i < size; i += channels) {
 		if ((int)(pixels[i]) > 128) {
@@ -230,7 +229,7 @@ void Image::apply_invert() {
 }
 
 void Image::rotate_image_90() {
-	// Rotating an image 90ï¿½ clockwise
+	// Rotating an image 90° clockwise
 	swap(width, height);
 	// Set the pixels rotated in a 2D vector
 	int pixel_idx = 0;
@@ -278,7 +277,7 @@ void Image::rotate_image_180() {
 }
 
 void Image::rotate_image_270() {
-	// Rotating an image 90ï¿½ clockwise
+	// Rotating an image 90° clockwise
 	swap(width, height);
 	// Set the pixels rotated in a 2D vector
 	int pixel_idx = 0;
@@ -674,7 +673,7 @@ Image merge_vertically(Image& img1, Image& img2) {
 void Image::detect_edges() {
 	// Detect edges in an image using Sobel operator
 	// First we convert the image to greyscale
-	apply_greyscale();
+	apply_grayscale();
 	int pixels_idx = 0;
 	vector<vector<unsigned char>> original_pixels(height, vector<unsigned char>(width));
 	vector<vector<unsigned char>> edited(height, vector<unsigned char>(width));
@@ -730,5 +729,108 @@ void Image::detect_edges() {
 			pixels_idx++;
 			if (pixels_idx >= size) pixels_idx = 0;
 		}
+	}
+}
+
+void Image::increase_purple() {
+	if (channels < 3) return;
+	for (int i = 0; i < size; i += channels) {
+		int red   = pixels[i];
+		int green = pixels[i + 1];
+		int blue  = pixels[i + 2];
+		red = red * 1.2;
+		green = 0.4 * green;
+		blue = blue * 1.5;
+		pixels[i]	  = min(red, 255);
+		pixels[i + 1] = min(green, 255);
+		pixels[i + 2] = min(blue, 255);
+	}
+}
+
+void Image::increase_contrast() {
+	float factor = 1.2;
+	for (int i = 0; i < size; i++) {
+		// Don't change the alpha channel
+		if (channels == 2 && (i + 1) % 2 == 0) {
+			continue;
+		}
+		if (channels == 4 && (i + 1) % 4 == 0) {
+			continue;
+		}
+		int pixel_value = pixels[i];
+		/*
+		Method1:
+			Without subtraction if it's a light area increase its intensity otherwise decrease it
+			if (pixel_value >= 128) {
+				pixel_value *= 1.1f;
+			}
+			else {
+				pixel_value *= 0.9f;
+			}
+		*/
+		/*
+		Method2:
+			128 is a mid value we consider that a value > 128 is light area otherwise it's dark area
+			We subtract 128 to know how far is that value from the mid value
+			The absolute value of the result represents how much is this area dark or light
+			Multiply it by the factor to increase the light area pixels intensity by 20% and decrease the dark by 20%
+			Add 128 again to restore the original details
+
+		*/
+		pixel_value = factor * (pixel_value - 128) + 128;
+		pixel_value = max(pixel_value, 0);
+		pixel_value = min(pixel_value, 255);
+		pixels[i] = pixel_value;
+	}
+}
+
+void Image::increase_yellow() {
+	if (channels < 3) return;
+	for (int i = 0; i < size; i += channels) {
+		int red = pixels[i];
+		int green = pixels[i + 1];
+		int blue = pixels[i + 2];
+
+		red = red * 1.4f;
+		green = green * 1.2f;
+		blue = blue * 0.8f;
+
+		pixels[i] = min(red, 255);
+		pixels[i + 1] = min(green, 255);
+		pixels[i + 2] = max(blue, 0);
+	}
+}
+
+int keepInRange(int pixel_value) {
+	if (pixel_value > 255) {
+		pixel_value = 255;
+	}
+	else if (pixel_value < 0) {
+		pixel_value = 0;
+	}
+	return pixel_value;
+}
+
+void Image::make_sunlight_effect() {
+	/*
+		Make a sunlight effect by first increase the contrast
+		Increase contrast -> increase the difference between the dark and light areas by making the light area lighter
+		and the dark areas darker
+		Second we increase the yellow color to make it like the sunlight
+	*/
+	if (channels < 3) return;
+	float factor = 1.2f;
+	for (int i = 0; i < size; i += channels) {
+		int red = pixels[i];
+		int green = pixels[i + 1];
+		int blue = pixels[i + 2];
+
+		red = 1.4f * (factor * (red - 128) + 128);
+		green = 1.2f * (factor * (green - 128) + 128);
+		blue = 0.8 * (factor * (blue - 128) + 128);
+
+		pixels[i] = keepInRange(red);
+		pixels[i + 1] = keepInRange(green);
+		pixels[i + 2] = keepInRange(blue);
 	}
 }

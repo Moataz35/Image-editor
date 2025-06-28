@@ -15,7 +15,7 @@ public:
 	Image();
 	Image(int width, int height, int channels);
 	Image(std::string name);
-	Image(const Image& img); // The returned value from a function is not a variable of type Image it's constant
+	Image(const Image& img); // The returned value from a function is not a variable of type Image it's a constant
 	~Image();
 	Image& operator=(Image& img);
 	bool get_image(std::string name);
@@ -25,7 +25,7 @@ public:
 	std::string get_file_extension(std::string name);
 	// Filters
 	// 1. Grayscale
-	void apply_greyscale();
+	void apply_grayscale();
 	// 2. Black and White
 	void apply_BlackandWhite();
 	// 3. Negative effect (invert images)
@@ -56,6 +56,10 @@ public:
 
 	// Additional
 	void blend(Image& img);
+	void increase_purple();
+	void increase_contrast();
+	void increase_yellow();
+	void make_sunlight_effect();
 };
 
 #endif

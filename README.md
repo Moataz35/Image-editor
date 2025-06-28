@@ -13,9 +13,9 @@ In this application the user will be able to do the following on images:
 
 |       Filters      |
 |--------------------|
-| Grary scale filter |
-| Black and White    |
-| Negative effect    |
+|     Grayscale      |
+|  Black and White   |
+|  Negative effect   |
 |  Merge two images  |
 |     Flipping       |
 |     Rotating       |
@@ -25,9 +25,11 @@ In this application the user will be able to do the following on images:
 |  Edge detection    |
 |     Resizing       |
 |     Bluring        |
+|     Purple         |
+|     Sunlight       |
 
 
-## Gray scale filter
+## Grayscale filter
  A grayscale image is an image where each pixel is represented by a single sample indicating the intensity of light or shade.
 
  In grayscale images, there is no color information, only varying shades
@@ -134,3 +136,13 @@ Read a good article [here](https://tannerhelland.com/2011/10/01/grayscale-image-
  By averaging a pixel with its neighbors these extreme variations are smoothed out.
 
  Read a good article [here](https://how.dev/answers/how-to-blur-an-image-using-a-mean-filter).
+
+
+## Purple
+ This filter just increases the purple color in an image.
+
+## Sunlight
+ This filter increases the amount of sunlight in the image.
+
+###### Formula
+ First we increase the contrast of the image. Contrast: It's the difference in intensities between the light areas and the dark areas in an image. When we increase the contrast the light areas become lighter and the dark areas become darker. After that we increase the yellow color to make it like the sunlight.
