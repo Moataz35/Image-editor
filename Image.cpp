@@ -1,23 +1,33 @@
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image.h"
+#include "stb_image_write.h"
+#include "tinyfiledialogs.h"
+#include "Image.h"
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <vector>
-#include "stb_image.h"
-#include "stb_image_write.h"
-#include "Image.h"
 #define NO_EXTENSION "No extension found"
 using namespace std;
 
-Image::Image() {
+
+
+stu::Image::Image() {
 	imageFullname = "";
 	width = height = channels = size = 0;
-	imageNamePointer = NULL;
+	image_path_ptr = NULL;
 	pixels = NULL;
+	applied_filters.resize(FiltersNum);
+	image_formats[0] = "*.png" ;
+	image_formats[1] = "*.bmp" ;
+	image_formats[2] = "*.tga" ;
+	image_formats[3] = "*.jpg" ;
 }
 
-Image::Image(int width, int height, int channels) {
+stu::Image::Image(int width, int height, int channels) : applied_filters(FiltersNum) {
+	imageFullname = "";
+	image_path_ptr = NULL;
 	this->width    = width;
 	this->height   = height;
 	this->channels = channels;
@@ -26,42 +36,85 @@ Image::Image(int width, int height, int channels) {
 	for (int i = 0; i < size; i++) {
 		this->pixels[i] = 0;
 	}
+	applied_filters.resize(FiltersNum);
+	image_formats[0] = "*.png";
+	image_formats[1] = "*.bmp";
+	image_formats[2] = "*.tga";
+	image_formats[3] = "*.jpg";
 }
 
-Image::Image(string name) {
+stu::Image::Image(string name) {
+	applied_filters.resize(FiltersNum);
+	image_formats[0] = "*.png";
+	image_formats[1] = "*.bmp";
+	image_formats[2] = "*.tga";
+	image_formats[3] = "*.jpg";
 	get_image(name);
 }
 
-Image::Image(const Image& img) {
+stu::Image::Image(const stu::Image& img) {
+	this->imageFullname = img.imageFullname;
+	this->image_path_ptr = this->imageFullname.c_str();
 	this->width    = img.width;
 	this->height   = img.height;
 	this->channels = img.channels;
 	this->size     = width * height * channels;
 	this->pixels = new unsigned char[size];
+	this->applied_filters = img.applied_filters;
 	for (int i = 0; i < size; i++) {
 		this->pixels[i] = img.pixels[i];
 	}
+	this->image_formats[0] = "*.png";
+	this->image_formats[1] = "*.bmp";
+	this->image_formats[2] = "*.tga";
+	this->image_formats[3] = "*.jpg";
 }
 
-Image& Image::operator=(Image& img) {
+stu::Image& stu::Image::operator=(const Image& img) {
 	stbi_image_free(this->pixels);
+	this->imageFullname = img.imageFullname;
+	this->image_path_ptr = this->imageFullname.c_str();
 	this->width    = img.width;
 	this->height   = img.height;
 	this->channels = img.channels;
 	this->size     = width * height * channels;
 	this->pixels = new unsigned char[size];
+	this->applied_filters = img.applied_filters;
 	for (int i = 0; i < size; i++) {
 		this->pixels[i] = img.pixels[i];
 	}
+	this->image_formats[0] = "*.png";
+	this->image_formats[1] = "*.bmp";
+	this->image_formats[2] = "*.tga";
+	this->image_formats[3] = "*.jpg";
 	return *this;
 }
 
-Image::~Image() {
+stu::Image::~Image() {
 	stbi_image_free(pixels);
 	cout << "Image has been destroyed!\n";
 }
 
-bool Image::get_image(string name) {
+bool stu::Image::loadFromFile() {
+	// Open a file dialog to let the user choose the image he want
+	image_path_ptr = tinyfd_openFileDialog(NULL, NULL, n_supported_formats, image_formats, NULL, 0);
+	if (image_path_ptr == NULL) {
+		std::cout << "Failed to load the iamge.\n";
+		return false;
+	}
+	// If the user choose an image and didn't press cancel get the pixels from the image
+	pixels = stbi_load(image_path_ptr, &width, &height, &channels, 0);
+	size = width * height * channels;
+	imageFullname = image_path_ptr;
+
+	if (pixels == NULL) {
+		std::cout << "Failed to get the pixels.\n";
+		return false;
+	}
+	return true;
+}
+
+bool stu::Image::get_image(string name) {
 	// Check if there is no file extension
 	string extension = get_file_extension(name);
 	if (extension == NO_EXTENSION) {
@@ -77,9 +130,9 @@ bool Image::get_image(string name) {
 
 	// The name is correct
 	this->imageFullname = name;
-	imageNamePointer = imageFullname.c_str();
+	image_path_ptr = imageFullname.c_str();
 
-	pixels = stbi_load(imageNamePointer, &width, &height, &channels, 0);
+	pixels = stbi_load(image_path_ptr, &width, &height, &channels, 0);
 	size = width * height * channels;
 
 	if (pixels != NULL) {
@@ -91,20 +144,20 @@ bool Image::get_image(string name) {
 	return false;
 }
 
-bool Image::save_image() {
+bool stu::Image::saveChanges() {
 	string extension = get_file_extension(imageFullname);
 	int success = 0;
 	if (extension == "png") {
-		success = stbi_write_png(imageNamePointer, width, height, channels, pixels, width * channels);
+		success = stbi_write_png(image_path_ptr, width, height, channels, pixels, width * channels);
 	}
 	else if (extension == "bmp") {
-		success = stbi_write_bmp(imageNamePointer, width, height, channels, pixels);
+		success = stbi_write_bmp(image_path_ptr, width, height, channels, pixels);
 	}
 	else if (extension == "tga") {
-		success = stbi_write_tga(imageNamePointer, width, height, channels, pixels);
+		success = stbi_write_tga(image_path_ptr, width, height, channels, pixels);
 	}
 	else if (extension == "jpg") {
-		success = stbi_write_jpg(imageNamePointer, width, height, channels, pixels, 100);
+		success = stbi_write_jpg(image_path_ptr, width, height, channels, pixels, 100);
 	}
 	if (success) {
 		cout << "Image is edited successfuly\n";
@@ -114,14 +167,62 @@ bool Image::save_image() {
 	return false;
 }
 
+bool stu::Image::saveCopy() {
+	// Get the full path of the new image
+	char* save_path = tinyfd_saveFileDialog("Saving a copy", NULL, n_supported_formats, image_formats, NULL);
+
+	// Check if there is no path provided
+	if (save_path == NULL) {
+		std::cerr << "The image is not saved!\n";
+		return false;
+	}
+
+	// If there is a path check if it's valid
+	if (!isSupportedFormat(save_path)) {
+		std::cerr << "This format is not supported!\n";
+		return false;
+	}
+
+	// Check if we have access to the selected directory
+	std::ofstream test;
+	test.open(save_path);
+	if (!test.is_open()) {
+		std::cerr << "We don't have access to this directory!\n";
+		return false;
+	}
+	test.close();
+
+	// Save the copy of the image
+	int success = 0;
+	string extension = get_file_extension(save_path);
+	if (extension == ".png") {
+		success = stbi_write_png(save_path, width, height, channels, pixels, width * channels);
+	}
+	else if (extension == ".bmp") {
+		success = stbi_write_bmp(save_path, width, height, channels, pixels);
+	}
+	else if (extension == ".tga") {
+		success = stbi_write_tga(save_path, width, height, channels, pixels);
+	}
+	else if (extension == ".jpg") {
+		success = stbi_write_jpg(save_path, width, height, channels, pixels, 100);
+	}
+
+	// Check if we successfully saved the image
+	if (!success) {
+		std::cerr << "Failed to save the image!\n";
+		return false;
+	}
+	return true;
+}
+
 
 // Try to save the new image with the copy constructor
-bool Image::save_new_image(string newImageName, string extension) {
+bool stu::Image::save_new_image(string newImageName, string extension) {
 	if (!can_create_new_file(newImageName, extension)) {
 		cout << "There is already a file with that name!\n";
 		return false;
 	}
-	newImageName += '.';
 	newImageName += extension;
 	const char* newImagePointer = newImageName.c_str();
 	int success = 0;
@@ -147,7 +248,7 @@ bool Image::save_new_image(string newImageName, string extension) {
 	return false;
 }
 
-bool Image::can_create_new_file(string newImageName, string extension) {
+bool stu::Image::can_create_new_file(string newImageName, string extension) {
 	// If the file is opened then there is already a file with that name
 	string fullname = newImageName + '.' + extension;
 	ifstream test;
@@ -162,26 +263,34 @@ bool Image::can_create_new_file(string newImageName, string extension) {
 	}
 }
 
-string Image::get_file_extension(string name) {
-	// Get the file extension to know which type we are working on
-	bool isExtension = false;
-	string extension = "";
-	for (int i = 0; i < name.length(); i++) {
-		if (isExtension) {
-			extension += name[i];
-		}
-		if (name[i] == '.') {
-			// If we reach '.' we are ready to take the extension
-			isExtension = true;
+bool stu::Image::isSupportedFormat(std::string image_path) {
+	std::string extension = "*" + get_file_extension(image_path);
+	for (int i = 0; i < n_supported_formats; i++) {
+		if (extension == image_formats[i]) {
+			return true;
 		}
 	}
-	if (isExtension) {
-		return extension;
-	}
-	return NO_EXTENSION;
+	// If we reach here there is no extension or it's not a supported format
+	return false;
 }
 
-void Image::apply_grayscale() {
+string stu::Image::get_file_extension(string name) {
+	std::string extension;
+	for (int i = 0; i < name.size(); i++) {
+		if (name[i] == '.') {
+			for (int j = i; j < name.size(); j++) {
+				extension += name[j];
+			}
+			break;
+		}
+	}
+	if (extension.empty()) {
+		return NO_EXTENSION;
+	}
+	return extension;
+}
+
+void stu::Image::apply_grayscale() {
 	if (channels < 3) {
 		// It's already doesn't have RGB colors
 		return;
@@ -203,10 +312,12 @@ void Image::apply_grayscale() {
 	for (int i = 0; i < size; i++) {
 		pixels[i] = gray_pixels[i];
 	}
+	applied_filters[stu::Grayscale] = true;
 }
 
-void Image::apply_BlackandWhite() {
+void stu::Image::apply_BlackandWhite() {
 	apply_grayscale();
+	applied_filters[stu::Grayscale] = false; // It's not a grayscale filter
 	// For 2 channels image we want to edit the first pixel only
 	for (int i = 0; i < size; i += channels) {
 		if ((int)(pixels[i]) > 128) {
@@ -216,9 +327,10 @@ void Image::apply_BlackandWhite() {
 			pixels[i] = 0;
 		}
 	}
+	applied_filters[stu::BlackandWhite] = true;
 }
 
-void Image::apply_invert() {
+void stu::Image::invert_image() {
 	if (channels < 3) {
 		return;
 	}
@@ -226,9 +338,10 @@ void Image::apply_invert() {
 		int temp = (int)(pixels[i]);
 		pixels[i] = 255 - temp;
 	}
+	applied_filters[stu::Negative] = true;
 }
 
-void Image::rotate_image_90() {
+void stu::Image::rotate_image_90() {
 	// Rotating an image 90° clockwise
 	swap(width, height);
 	// Set the pixels rotated in a 2D vector
@@ -251,9 +364,10 @@ void Image::rotate_image_90() {
 			pixel_idx++;
 		}
 	}
+	applied_filters[stu::Rotate] = true;
 }
 
-void Image::rotate_image_180() {
+void stu::Image::rotate_image_180() {
 	int pixel_idx = 0;
 	vector<vector<unsigned char>> rotated(height, vector<unsigned char>(width * channels));
 	for (int row = height - 1; row >= 0; row--) {
@@ -274,9 +388,10 @@ void Image::rotate_image_180() {
 			pixel_idx++;
 		}
 	}
+	applied_filters[stu::Rotate] = true;
 }
 
-void Image::rotate_image_270() {
+void stu::Image::rotate_image_270() {
 	// Rotating an image 90° clockwise
 	swap(width, height);
 	// Set the pixels rotated in a 2D vector
@@ -299,9 +414,14 @@ void Image::rotate_image_270() {
 			pixel_idx++;
 		}
 	}
+	applied_filters[stu::Rotate] = true;
 }
 
-void Image::resize(int newWidth, int newheight) {
+void stu::Image::resize(int newWidth, int newheight) {
+	// Adjust the dimensions according to minimum and maxmimum possible dimensions
+	newWidth = min(max(10, newWidth), 1000);
+	newheight = min(max(10, newheight), 1000);
+
 	float xfactor = (float)width / newWidth;
 	float yfactor = (float)height / newheight;
 	// Save the original pixels to free the pointer
@@ -312,6 +432,7 @@ void Image::resize(int newWidth, int newheight) {
 			for (int ch = 0; ch < channels; ch++) {
 				original[y][x][ch] = pixels[pixel_idx];
 				pixel_idx++;
+				if (pixel_idx >= size) pixel_idx = 0;
 			}
 		}
 	}
@@ -341,12 +462,14 @@ void Image::resize(int newWidth, int newheight) {
 			for (int ch = 0; ch < channels; ch++) {
 				pixels[pixel_idx] = resized[y][x][ch];
 				pixel_idx++;
+				if (pixel_idx >= size) pixel_idx = 0;
 			}
 		}
 	}
+	applied_filters[stu::Resize] = true;
 }
 
-void Image::flip_horizontally() {
+void stu::Image::flip_horizontally() {
 	vector<vector<vector<unsigned char>>> flipped(height, vector<vector<unsigned char>>(width, vector<unsigned char>(channels)));
 	int pixel_idx = 0;
 	for (int y = 0; y < height; y++) {
@@ -367,9 +490,10 @@ void Image::flip_horizontally() {
 			}
 		}
 	}
+	applied_filters[stu::Flip] = true;
 }
 
-void Image::flip_vertically() {
+void stu::Image::flip_vertically() {
 	vector<vector<vector<unsigned char>>> flipped(height, vector<vector<unsigned char>>(width, vector<unsigned char>(channels)));
 	int pixel_idx = 0;
 	for (int y = height - 1; y >= 0; y--) {
@@ -390,12 +514,17 @@ void Image::flip_vertically() {
 			}
 		}
 	}
+	applied_filters[stu::Flip] = true;
 }
 
-void Image::crop(int start_x, int start_y, int newWidth, int newheight) {
+void stu::Image::crop(int start_x, int start_y, int newWidth, int newheight) {
 	newWidth = min(newWidth, width - start_x);
 	newheight = min(newheight, height - start_y);
-	Image temp(newWidth, newheight, this->channels);
+
+	stu::Image temp(newWidth, newheight, this->channels);
+	temp.imageFullname = this->imageFullname;
+	temp.image_path_ptr = temp.imageFullname.c_str();
+
 	vector<vector<vector<unsigned char>>> original(height, vector<vector<unsigned char>>(width, vector<unsigned char>(channels)));
 	int pixel_idx = 0;
 	for (int y = 0; y < height; y++) {
@@ -409,7 +538,7 @@ void Image::crop(int start_x, int start_y, int newWidth, int newheight) {
 
 	pixel_idx = 0;
 	for (int y = start_y; y < newheight + start_y; y++) {
-		for (int x = start_x; x < newWidth + start_y; x++) {
+		for (int x = start_x; x < newWidth + start_x; x++) {
 			for (int ch = 0; ch < channels; ch++) {
 				temp.pixels[pixel_idx] = original[y][x][ch];
 				pixel_idx++;
@@ -419,9 +548,10 @@ void Image::crop(int start_x, int start_y, int newWidth, int newheight) {
 
 	this->operator=(temp);
 	//*this = temp;
+	applied_filters[stu::Crop] = true;
 }
 
-void Image::increase_brightness() {
+void stu::Image::increase_brightness() {
 	for (int i = 0; i < size; i++) {
 		if (static_cast<int>(pixels[i]) * 1.5 > 255) {
 			pixels[i] = 255;
@@ -431,17 +561,19 @@ void Image::increase_brightness() {
 			// pixels[i] = pixels[i] + 0.5 * pixels[i]
 		}
 	}
+	applied_filters[stu::Brightness] = true;
 }
 
-void Image::decrease_brightness() {
+void stu::Image::decrease_brightness() {
 	for (int i = 0; i < size; i++) {
 		pixels[i] = static_cast<int>(pixels[i]) * 0.5;
 		// pixels[i] = pixels[i] - 0.5 * pixels[i]
 	}
+	applied_filters[stu::Brightness] = true;
 }
 
 
-void Image::blend(Image& img) {
+void stu::Image::blend(stu::Image& img) {
 	// Blend two images to a new one Which image1 (the caller) will be more clear
 
 	img.resize(400, 400);
@@ -464,8 +596,13 @@ void Image::blend(Image& img) {
 	}
 }
 
-void Image::add_frame(int thickness) {
+void stu::Image::add_frame(int thickness) {
 	// Add a colorful frame to RGB or RGBA images and if the channels is less than 3 it will be a black frame
+
+	// First let the user choose the frame color
+	unsigned char RGB[3] = { static_cast<unsigned char>(128) };
+	tinyfd_colorChooser("Choose a color", NULL, RGB, RGB);
+
 	width = width + 2 * thickness;
 	height = height + 2 * thickness;
 	vector<vector<vector<unsigned char>>> edited(height, vector<vector<unsigned char>>(width, vector<unsigned char>(channels)));
@@ -475,21 +612,19 @@ void Image::add_frame(int thickness) {
 	for (int y = 0; y < height; y++) {
 		for (int x = 0; x < width; x++) {
 			for (int ch = 0; ch < channels; ch++) {
+				// If we are in the range of the frame part set the frame color
 				if (y < thickness || y >= height - thickness || x < thickness || x >= width - thickness) {
-					if (x == thickness / 2 || y == thickness / 2 || x == width - thickness / 2 - 1 || y == height - thickness / 2 - 1) {
-						// Add white lines
-						edited[y][x][ch] = 255;
+
+					if (ch < 3) {
+						edited[y][x][ch] = RGB[ch];
 					}
 					else {
-						if (ch > 1) {
-							edited[y][x][ch] = 255;
-						}
-						else {
-							edited[y][x][ch] = 0;
-						}
+						// The alpha channel
+						edited[y][x][ch] = 255;
 					}
 				}
-				else {
+				else { 
+					// Set the pixels of the image itself
 					edited[y][x][ch] = pixels[pixel_idx];
 					pixel_idx++;
 					if (pixel_idx >= size) pixel_idx = 0;
@@ -508,11 +643,13 @@ void Image::add_frame(int thickness) {
 			}
 		}
 	}
+
+	applied_filters[stu::Frame] = true;
 }
 
 
-void Image::apply_mean_blur() {
-	const int N = 9;
+void stu::Image::apply_mean_blur() {
+	const int N = 7;
 	// 5x5 kernel with sigma = 1
 	/*vector<vector<int>> kernel = {
 		{1,  4,  6,  4, 1},
@@ -569,13 +706,15 @@ void Image::apply_mean_blur() {
 			}
 		}
 	}
+
+	applied_filters[stu::Blur] = true;
 }
 
-Image merge_horizontally(Image& img1, Image& img2) {
+stu::Image stu::merge_horizontally(stu::Image& img1, stu::Image& img2) {
 	// Merging 2 images horizontally by resizing the image that is bigger in height
 	if (img1.channels != img2.channels) {
 		// We don't merge 2 images different in channels
-		Image no_image;
+		stu::Image no_image;
 		return no_image;
 	}
 
@@ -586,7 +725,7 @@ Image merge_horizontally(Image& img1, Image& img2) {
 		img2.resize(img2.width, img1.height);
 	}
 
-	Image merged(img1.width + img2.width, img1.height, img1.channels);
+	stu::Image merged(img1.width + img2.width, img1.height, img1.channels);
 	vector<vector<vector<unsigned char>>> edited(merged.height, vector<vector<unsigned char>>(merged.width, vector<unsigned char>(merged.channels)));
 	int pixel1_idx = 0, pixel2_idx = 0;
 	for (int y = 0; y < merged.height; y++) {
@@ -620,11 +759,11 @@ Image merge_horizontally(Image& img1, Image& img2) {
 	return merged;
 }
 
-Image merge_vertically(Image& img1, Image& img2) {
+stu::Image stu::merge_vertically(stu::Image& img1, stu::Image& img2) {
 	// Merging 2 images vertically by resizing the image that is bigger in width
 	if (img1.channels != img2.channels) {
 		// We don't merge 2 images different in channels
-		Image no_image;
+		stu::Image no_image;
 		return no_image;
 	}
 
@@ -635,7 +774,7 @@ Image merge_vertically(Image& img1, Image& img2) {
 		img2.resize(img1.width, img2.height);
 	}
 
-	Image merged(img1.width, img1.height + img2.height, img1.channels);
+	stu::Image merged(img1.width, img1.height + img2.height, img1.channels);
 	vector<vector<vector<unsigned char>>> edited(merged.height, vector<vector<unsigned char>>(merged.width, vector<unsigned char>(merged.channels)));
 	int pixel1_idx = 0, pixel2_idx = 0;
 	for (int y = 0; y < merged.height; y++) {
@@ -670,13 +809,16 @@ Image merge_vertically(Image& img1, Image& img2) {
 	return merged;
 }
 
-void Image::detect_edges() {
+void stu::Image::detect_edges() {
 	// Detect edges in an image using Sobel operator
-	// First we convert the image to greyscale
+	// First we convert the image to grayscale (we just need the intensity of the pixels)
 	apply_grayscale();
+	applied_filters[stu::Grayscale] = false; // It's not a grayscale filter
+
 	int pixels_idx = 0;
 	vector<vector<unsigned char>> original_pixels(height, vector<unsigned char>(width));
 	vector<vector<unsigned char>> edited(height, vector<unsigned char>(width));
+
 	for (int y = 0; y < height; y++) {
 		for (int x = 0; x < width; x++) {
 			original_pixels[y][x] = pixels[pixels_idx];
@@ -730,9 +872,11 @@ void Image::detect_edges() {
 			if (pixels_idx >= size) pixels_idx = 0;
 		}
 	}
+
+	applied_filters[stu::EdgeDetection] = true;
 }
 
-void Image::increase_purple() {
+void stu::Image::increase_purple() {
 	if (channels < 3) return;
 	for (int i = 0; i < size; i += channels) {
 		int red   = pixels[i];
@@ -747,7 +891,7 @@ void Image::increase_purple() {
 	}
 }
 
-void Image::increase_contrast() {
+void stu::Image::increase_contrast() {
 	float factor = 1.2;
 	for (int i = 0; i < size; i++) {
 		// Don't change the alpha channel
@@ -784,7 +928,7 @@ void Image::increase_contrast() {
 	}
 }
 
-void Image::increase_yellow() {
+void stu::Image::increase_yellow() {
 	if (channels < 3) return;
 	for (int i = 0; i < size; i += channels) {
 		int red = pixels[i];
@@ -811,7 +955,7 @@ int keepInRange(int pixel_value) {
 	return pixel_value;
 }
 
-void Image::make_sunlight_effect() {
+void stu::Image::make_sunlight_effect() {
 	/*
 		Make a sunlight effect by first increase the contrast
 		Increase contrast -> increase the difference between the dark and light areas by making the light area lighter
@@ -833,4 +977,13 @@ void Image::make_sunlight_effect() {
 		pixels[i + 1] = keepInRange(green);
 		pixels[i + 2] = keepInRange(blue);
 	}
+}
+
+bool stu::Image::isNotTogether() {
+	for (int i = 0; i < NOT_TOGETHER; i++) {
+		if (applied_filters[i]) {
+			return true;
+		}
+	}
+	return false;
 }
