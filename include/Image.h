@@ -58,6 +58,12 @@ namespace stu {
 		bool isNotTogether();
 
 		std::string get_file_extension(std::string name);
+
+		int index_3D_to_1D(int width, int height, int channels, int y, int x, int z);
+
+		void index_1D_to_3D(int width, int height, int channels, int index, int& y, int& x, int& z);
+
+		void convert_to_RGB();
 		
 		// Filters
 		// 1. Grayscale
@@ -70,8 +76,10 @@ namespace stu {
 		void invert_image();
 
 		// 4. Merge images
-		friend Image merge_horizontally(Image& img1, Image& img2);
-		friend Image merge_vertically(Image& img1, Image& img2);
+		Image merge_horizontally(Image& img2);
+		Image merge_vertically(Image& img2);
+		void merge_H(Image& second_img);
+		void merge_V(Image& second_img);
 
 		// 5. Flip image
 		void flip_horizontally();

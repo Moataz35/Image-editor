@@ -26,6 +26,7 @@ stu::Image::Image() {
 }
 
 stu::Image::Image(int width, int height, int channels) : applied_filters(FiltersNum) {
+	// Be careful of creating an image with no name
 	imageFullname = "";
 	image_path_ptr = NULL;
 	this->width    = width;
@@ -70,7 +71,7 @@ stu::Image::Image(const stu::Image& img) {
 	this->image_formats[3] = "*.jpg";
 }
 
-stu::Image& stu::Image::operator=(const Image& img) {
+stu::Image& stu::Image::operator=(const stu::Image& img) {
 	stbi_image_free(this->pixels);
 	this->imageFullname = img.imageFullname;
 	this->image_path_ptr = this->imageFullname.c_str();
@@ -92,14 +93,15 @@ stu::Image& stu::Image::operator=(const Image& img) {
 
 stu::Image::~Image() {
 	stbi_image_free(pixels);
-	cout << "Image has been destroyed!\n";
+	/*cout << "Image has been destroyed!\n";*/
 }
 
 bool stu::Image::loadFromFile() {
 	// Open a file dialog to let the user choose the image he want
-	image_path_ptr = tinyfd_openFileDialog(NULL, NULL, n_supported_formats, image_formats, NULL, 0);
+	char* temp_ptr = tinyfd_openFileDialog(NULL, NULL, n_supported_formats, image_formats, NULL, 0);
+	image_path_ptr = temp_ptr;
 	if (image_path_ptr == NULL) {
-		std::cout << "Failed to load the iamge.\n";
+		std::cerr << "Failed to load the iamge.\n";
 		return false;
 	}
 	// If the user choose an image and didn't press cancel get the pixels from the image
@@ -108,7 +110,7 @@ bool stu::Image::loadFromFile() {
 	imageFullname = image_path_ptr;
 
 	if (pixels == NULL) {
-		std::cout << "Failed to get the pixels.\n";
+		std::cerr << "Failed to get the pixels.\n";
 		return false;
 	}
 	return true;
@@ -122,12 +124,6 @@ bool stu::Image::get_image(string name) {
 		return false;
 	}
 
-	// Check if the file exists
-	//if (can_create_new_file(name, extension)) {
-	//	cout << "There is no image with that name in this directory\n";
-	//	return false;
-	//}
-
 	// The name is correct
 	this->imageFullname = name;
 	image_path_ptr = imageFullname.c_str();
@@ -135,36 +131,34 @@ bool stu::Image::get_image(string name) {
 	pixels = stbi_load(image_path_ptr, &width, &height, &channels, 0);
 	size = width * height * channels;
 
-	if (pixels != NULL) {
-		cout << "Read the file successfuly\n";
-		return true;
+	if (pixels == NULL) {
+		cerr << "Failed to read the file!\n";
+		cerr << "Wrong file name\n";
+		return false;
 	}
-	cout << "Failed to read the file!\n";
-	cout << "Wrong file name\n";
-	return false;
+	return true;
 }
 
 bool stu::Image::saveChanges() {
 	string extension = get_file_extension(imageFullname);
 	int success = 0;
-	if (extension == "png") {
+	if (extension == ".png") {
 		success = stbi_write_png(image_path_ptr, width, height, channels, pixels, width * channels);
 	}
-	else if (extension == "bmp") {
+	else if (extension == ".bmp") {
 		success = stbi_write_bmp(image_path_ptr, width, height, channels, pixels);
 	}
-	else if (extension == "tga") {
+	else if (extension == ".tga") {
 		success = stbi_write_tga(image_path_ptr, width, height, channels, pixels);
 	}
-	else if (extension == "jpg") {
+	else if (extension == ".jpg") {
 		success = stbi_write_jpg(image_path_ptr, width, height, channels, pixels, 100);
 	}
-	if (success) {
-		cout << "Image is edited successfuly\n";
-		return true;
+	if (!success) {
+		cerr << "saveChanges(): Failed to save the image\n";
+		return false;
 	}
-	cout << "Failed to save the image\n";
-	return false;
+	return true;
 }
 
 bool stu::Image::saveCopy() {
@@ -210,7 +204,7 @@ bool stu::Image::saveCopy() {
 
 	// Check if we successfully saved the image
 	if (!success) {
-		std::cerr << "Failed to save the image!\n";
+		std::cerr << "SaveCopy(): Failed to save the image!\n";
 		return false;
 	}
 	return true;
@@ -597,14 +591,20 @@ void stu::Image::blend(stu::Image& img) {
 }
 
 void stu::Image::add_frame(int thickness) {
-	// Add a colorful frame to RGB or RGBA images and if the channels is less than 3 it will be a black frame
+	if (channels < 3) {
+		convert_to_RGB();
+	}
 
 	// First let the user choose the frame color
 	unsigned char RGB[3] = { static_cast<unsigned char>(128) };
 	tinyfd_colorChooser("Choose a color", NULL, RGB, RGB);
 
+	int old_size = size;
 	width = width + 2 * thickness;
 	height = height + 2 * thickness;
+	size = width * height * channels;
+	unsigned char* new_pixels = new unsigned char[size];
+
 	vector<vector<vector<unsigned char>>> edited(height, vector<vector<unsigned char>>(width, vector<unsigned char>(channels)));
 	int pixel_idx = 0;
 	// First n row, last n column, last n row, last n column all their pixels will be blue
@@ -612,6 +612,7 @@ void stu::Image::add_frame(int thickness) {
 	for (int y = 0; y < height; y++) {
 		for (int x = 0; x < width; x++) {
 			for (int ch = 0; ch < channels; ch++) {
+				
 				// If we are in the range of the frame part set the frame color
 				if (y < thickness || y >= height - thickness || x < thickness || x >= width - thickness) {
 
@@ -627,22 +628,20 @@ void stu::Image::add_frame(int thickness) {
 					// Set the pixels of the image itself
 					edited[y][x][ch] = pixels[pixel_idx];
 					pixel_idx++;
-					if (pixel_idx >= size) pixel_idx = 0;
+					if (pixel_idx >= old_size) pixel_idx = 0;
 				}
+
+				int the_1d_index = index_3D_to_1D(
+					width, height, channels,
+					y, x, ch
+				);
+				new_pixels[the_1d_index] = edited[y][x][ch];
 			}
 		}
 	}
-	this->resize(width, height);
-	pixel_idx = 0;
-	for (int y = 0; y < height; y++) {
-		for (int x = 0; x < width; x++) {
-			for (int ch = 0; ch < channels; ch++) {
-				pixels[pixel_idx] = edited[y][x][ch];
-				pixel_idx++;
-				if (pixel_idx >= size) pixel_idx = 0;
-			}
-		}
-	}
+	
+	stbi_image_free(pixels);
+	pixels = new_pixels;
 
 	applied_filters[stu::Frame] = true;
 }
@@ -710,31 +709,33 @@ void stu::Image::apply_mean_blur() {
 	applied_filters[stu::Blur] = true;
 }
 
-stu::Image stu::merge_horizontally(stu::Image& img1, stu::Image& img2) {
+stu::Image stu::Image::merge_horizontally(stu::Image& img2) {
 	// Merging 2 images horizontally by resizing the image that is bigger in height
-	if (img1.channels != img2.channels) {
-		// We don't merge 2 images different in channels
-		stu::Image no_image;
-		return no_image;
+	if (channels != img2.channels) {
+		convert_to_RGB();
+		img2.convert_to_RGB();
 	}
 
-	if (img1.height > img2.height) {
-		img1.resize(img1.width, img2.height);
+	if (height > img2.height) {
+		resize(width, img2.height);
 	}
-	else if (img1.height < img2.height) {
-		img2.resize(img2.width, img1.height);
+	else if (height < img2.height) {
+		img2.resize(img2.width, height);
 	}
 
-	stu::Image merged(img1.width + img2.width, img1.height, img1.channels);
+	stu::Image merged(width + img2.width, height, channels);
+	merged.imageFullname = image_path_ptr;
+	merged.image_path_ptr = merged.imageFullname.c_str();
+
 	vector<vector<vector<unsigned char>>> edited(merged.height, vector<vector<unsigned char>>(merged.width, vector<unsigned char>(merged.channels)));
 	int pixel1_idx = 0, pixel2_idx = 0;
 	for (int y = 0; y < merged.height; y++) {
 		for (int x = 0; x < merged.width; x++) {
 			for (int ch = 0; ch < merged.channels; ch++) {
-				if (x < img1.width) {
-					edited[y][x][ch] = img1.pixels[pixel1_idx];
+				if (x < width) {
+					edited[y][x][ch] = pixels[pixel1_idx];
 					pixel1_idx++;
-					if (pixel1_idx >= img1.size) pixel1_idx = 0; // Just for safety
+					if (pixel1_idx >= size) pixel1_idx = 0; // Just for safety
 				}
 				else {
 					edited[y][x][ch] = img2.pixels[pixel2_idx];
@@ -756,34 +757,37 @@ stu::Image stu::merge_horizontally(stu::Image& img1, stu::Image& img2) {
 		}
 	}
 
+	this->operator=(merged);
 	return merged;
 }
 
-stu::Image stu::merge_vertically(stu::Image& img1, stu::Image& img2) {
+stu::Image stu::Image::merge_vertically(stu::Image& img2) {
 	// Merging 2 images vertically by resizing the image that is bigger in width
-	if (img1.channels != img2.channels) {
-		// We don't merge 2 images different in channels
-		stu::Image no_image;
-		return no_image;
+	if (channels != img2.channels) {
+		convert_to_RGB();
+		img2.convert_to_RGB();
 	}
 
-	if (img1.width > img2.width) {
-		img1.resize(img2.width, img1.height);
+	if (width > img2.width) {
+		resize(img2.width, height);
 	}
-	else if (img1.width < img2.width) {
-		img2.resize(img1.width, img2.height);
+	else if (width < img2.width) {
+		img2.resize(width, img2.height);
 	}
 
-	stu::Image merged(img1.width, img1.height + img2.height, img1.channels);
+	stu::Image merged(width, height + img2.height, channels);
+	merged.imageFullname = image_path_ptr;
+	merged.image_path_ptr = merged.imageFullname.c_str();
+
 	vector<vector<vector<unsigned char>>> edited(merged.height, vector<vector<unsigned char>>(merged.width, vector<unsigned char>(merged.channels)));
 	int pixel1_idx = 0, pixel2_idx = 0;
 	for (int y = 0; y < merged.height; y++) {
 		for (int x = 0; x < merged.width; x++) {
 			for (int ch = 0; ch < merged.channels; ch++) {
-				if (y < img1.height) {
-					edited[y][x][ch] = img1.pixels[pixel1_idx];
+				if (y < height) {
+					edited[y][x][ch] = pixels[pixel1_idx];
 					pixel1_idx++;
-					if (pixel1_idx >= img1.size) pixel1_idx = 0;
+					if (pixel1_idx >= size) pixel1_idx = 0;
 				}
 				else {
 					edited[y][x][ch] = img2.pixels[pixel2_idx];
@@ -806,6 +810,7 @@ stu::Image stu::merge_vertically(stu::Image& img1, stu::Image& img2) {
 		}
 	}
 
+	this->operator=(merged);
 	return merged;
 }
 
@@ -986,4 +991,129 @@ bool stu::Image::isNotTogether() {
 		}
 	}
 	return false;
+}
+
+int stu::Image::index_3D_to_1D(int width, int height, int channels, int y, int x, int z) {
+	// - Storing pixels is different from storing 3D array in memory
+	// - In images we set all the values of the pixels (channels) consecutive
+	// - In 3D arrays we store a consecutive 2D arrays so that the second value of the first pixels
+	//   will be after a whole 2D array (Imagine it like a cube) the values of a pixel
+	//   are behind each other not side by side like an image
+	return z + (channels * width * y) + (channels * x);
+}
+
+void stu::Image::index_1D_to_3D(int width, int height, int channels, int index, int& y, int& x, int& z) {
+	// If you have 135 coins and you want to know how many 100s, 10s and 1s in it
+	// First you begin with the big one to know how many 100 in it by dividing the number by 100
+	// You continue like that but here you will use the dimensions
+	y = index / (channels * width);
+	index = index % (channels * width);
+	x = index / channels;
+	z = index % channels;
+}
+
+void stu::Image::convert_to_RGB() {
+	if (channels == 3) return;
+	int old_channels = channels;
+	int old_size = size;
+	channels = 3;
+	size = width * height * channels;
+	unsigned char* new_pixels = new unsigned char[size];
+	if (channels < 3) {
+
+		for (int i = 0, j = 0; i < old_size && j < size; i += old_channels, j += channels) {
+			new_pixels[j] = new_pixels[j + 1] = new_pixels[j + 2] = pixels[i];
+		}
+	}
+	else {
+		
+		for (int i = 0, j = 0; i < old_size && j < size; i += old_channels, j += channels) {
+			new_pixels[j] = pixels[i];
+			new_pixels[j + 1] = pixels[i + 1];
+			new_pixels[j + 2] = pixels[i + 2];
+		}
+	}
+	stbi_image_free(pixels);
+	pixels = new_pixels;
+}
+
+void stu::Image::merge_H(Image& second_img) {
+	// The images should have the same number of channels
+	this->convert_to_RGB();
+	second_img.convert_to_RGB();
+
+	if (this->height > second_img.height) {
+		this->resize(this->width, second_img.height);
+	}
+	else if (this->height < second_img.height) {
+		second_img.resize(second_img.width, this->height);
+	}
+
+	int new_width = width + second_img.width;
+	std::cout << "The new width = " << new_width << std::endl;
+	int new_size = new_width * height * channels;
+	unsigned char* new_pixels = new unsigned char[new_size];
+
+	for (int y = 0; y < height; y++) {
+		for (int x = 0; x < new_width; x++) {
+			for (int ch = 0; ch < channels; ch++) {
+				int index_1d = index_3D_to_1D(
+					new_width, height, channels, y, x, ch
+				);
+				if (x < width) {
+					new_pixels[index_1d] = pixels[index_1d];
+				}
+				else {
+					// When we reach the second image begin x from 0 again
+					int second_index_1d = index_3D_to_1D(
+						new_width, height, channels, y, x - width, ch
+					);
+					new_pixels[index_1d] = second_img.pixels[second_index_1d];
+				}
+			}
+		}
+	}
+
+	stbi_image_free(pixels);
+	pixels = new_pixels;
+}
+
+void stu::Image::merge_V(Image& second_img) {
+	// The images should have the same number of channels
+	this->convert_to_RGB();
+	second_img.convert_to_RGB();
+
+	if (this->width > second_img.width) {
+		this->resize(second_img.width, this->height);
+	}
+	else if (this->width < second_img.width) {
+		second_img.resize(this->width, second_img.height);
+	}
+
+	
+	int new_height = height + second_img.height;
+	unsigned char* new_pixels = new unsigned char[size + second_img.size];
+
+	for (int y = 0; y < new_height; y++) {
+		for (int x = 0; x < width; x++) {
+			for (int ch = 0; ch < channels; ch++) {
+				int index_1d = index_3D_to_1D(
+					width, new_height, channels, y, x, ch
+				);
+				if (y < height) {
+					new_pixels[index_1d] = pixels[index_1d];
+				}
+				else {
+					// When we reach the second image begin x from 0 again
+					int second_index_1d = index_3D_to_1D(
+						width, new_height, channels, y - height, x, ch
+					);
+					new_pixels[index_1d] = second_img.pixels[second_index_1d];
+				}
+			}
+		}
+	}
+
+	stbi_image_free(pixels);
+	pixels = new_pixels;
 }
