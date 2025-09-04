@@ -1,4 +1,4 @@
-# A simple image processor
+# A simple image editor
 
 An application to edit images
 We will use stb_image library to make this app.
