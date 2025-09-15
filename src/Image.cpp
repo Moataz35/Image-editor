@@ -99,15 +99,15 @@ stu::Image::~Image() {
 bool stu::Image::loadFromFile() {
 	// Open a file dialog to let the user choose the image he want
 	char* temp_ptr = tinyfd_openFileDialog(NULL, NULL, n_supported_formats, image_formats, NULL, 0);
-	image_path_ptr = temp_ptr;
-	if (image_path_ptr == NULL) {
+	if (temp_ptr == NULL) {
 		std::cerr << "Failed to load the iamge.\n";
 		return false;
 	}
+
+	imageFullname = temp_ptr;
 	// If the user choose an image and didn't press cancel get the pixels from the image
-	pixels = stbi_load(image_path_ptr, &width, &height, &channels, 0);
+	pixels = stbi_load(imageFullname.c_str(), &width, &height, &channels, 0);
 	size = width * height * channels;
-	imageFullname = image_path_ptr;
 
 	if (pixels == NULL) {
 		std::cerr << "Failed to get the pixels.\n";
@@ -126,9 +126,8 @@ bool stu::Image::get_image(string name) {
 
 	// The name is correct
 	this->imageFullname = name;
-	image_path_ptr = imageFullname.c_str();
 
-	pixels = stbi_load(image_path_ptr, &width, &height, &channels, 0);
+	pixels = stbi_load(imageFullname.c_str(), &width, &height, &channels, 0);
 	size = width * height * channels;
 
 	if (pixels == NULL) {
@@ -143,16 +142,16 @@ bool stu::Image::saveChanges() {
 	string extension = get_file_extension(imageFullname);
 	int success = 0;
 	if (extension == ".png") {
-		success = stbi_write_png(image_path_ptr, width, height, channels, pixels, width * channels);
+		success = stbi_write_png(imageFullname.c_str(), width, height, channels, pixels, width * channels);
 	}
 	else if (extension == ".bmp") {
-		success = stbi_write_bmp(image_path_ptr, width, height, channels, pixels);
+		success = stbi_write_bmp(imageFullname.c_str(), width, height, channels, pixels);
 	}
 	else if (extension == ".tga") {
-		success = stbi_write_tga(image_path_ptr, width, height, channels, pixels);
+		success = stbi_write_tga(imageFullname.c_str(), width, height, channels, pixels);
 	}
 	else if (extension == ".jpg") {
-		success = stbi_write_jpg(image_path_ptr, width, height, channels, pixels, 100);
+		success = stbi_write_jpg(imageFullname.c_str(), width, height, channels, pixels, 100);
 	}
 	if (!success) {
 		cerr << "saveChanges(): Failed to save the image\n";
@@ -163,7 +162,7 @@ bool stu::Image::saveChanges() {
 
 bool stu::Image::saveCopy() {
 	// Get the full path of the new image
-	char* save_path = tinyfd_saveFileDialog("Saving a copy", NULL, n_supported_formats, image_formats, NULL);
+	const char* save_path = tinyfd_saveFileDialog("Saving a copy", NULL, n_supported_formats, image_formats, NULL);
 
 	// Check if there is no path provided
 	if (save_path == NULL) {
