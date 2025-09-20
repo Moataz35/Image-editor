@@ -1,6 +1,6 @@
-# A simple image editor
+# M4Me-photos
 
-An application to edit images
+An simple application to edit images
 We will use stb_image library to make this app.
 In this application the user will be able to do the following on images:
 
